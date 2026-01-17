@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "cjm-text-plugin-system"
+  site-url: "https://cj-mills.github.io/cjm-text-plugin-system"
+  description: "Defines standardized interfaces and data structures for text processing plugins, enabling modular NLP operations like sentence splitting, tokenization, and chunking within the cjm-plugin-system ecosystem."
+  repo-branch: main
+  repo-url: "https://github.com/cj-mills/cjm-text-plugin-system"
