@@ -5,7 +5,7 @@
 # %% auto #0
 __all__ = ['TextProcessingPlugin']
 
-# %% ../nbs/plugin_interface.ipynb #d83e8fdc
+# %% ../nbs/plugin_interface.ipynb #20a1ebe7
 from abc import abstractmethod
 from typing import Dict, Any
 
@@ -13,7 +13,7 @@ from cjm_plugin_system.core.interface import PluginInterface
 
 from .core import TextProcessResult
 
-# %% ../nbs/plugin_interface.ipynb #bc34c558
+# %% ../nbs/plugin_interface.ipynb #dcff1efe
 class TextProcessingPlugin(PluginInterface):
     """
     Abstract base class for plugins that perform NLP operations.

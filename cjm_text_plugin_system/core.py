@@ -5,11 +5,11 @@
 # %% auto #0
 __all__ = ['TextSpan', 'TextProcessResult']
 
-# %% ../nbs/core.ipynb #506ad236
+# %% ../nbs/core.ipynb #2daa065e
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Any
 
-# %% ../nbs/core.ipynb #62eb462b
+# %% ../nbs/core.ipynb #e5093528
 @dataclass
 class TextSpan:
     """Represents a segment of text with its original character coordinates."""
@@ -23,7 +23,7 @@ class TextSpan:
         """Convert span to dictionary for serialization."""
         return asdict(self)
 
-# %% ../nbs/core.ipynb #93b3794e
+# %% ../nbs/core.ipynb #ab11982b
 @dataclass
 class TextProcessResult:
     """Container for text processing results."""
