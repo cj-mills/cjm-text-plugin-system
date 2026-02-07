@@ -13,9 +13,10 @@ pip install cjm_text_plugin_system
 
     nbs/
     ├── core.ipynb             # DTOs for text processing with character-level span tracking
-    └── plugin_interface.ipynb # Domain-specific plugin interface for text processing operations
+    ├── plugin_interface.ipynb # Domain-specific plugin interface for text processing operations
+    └── storage.ipynb          # Standardized SQLite storage for text processing results with content hashing
 
-Total: 2 notebooks
+Total: 3 notebooks
 
 ## Module Dependencies
 
@@ -23,6 +24,7 @@ Total: 2 notebooks
 graph LR
     core[core<br/>Core Data Structures]
     plugin_interface[plugin_interface<br/>Text Processing Plugin Interface]
+    storage[storage<br/>Text Processing Storage]
 
     plugin_interface --> core
 ```
@@ -113,4 +115,76 @@ class TextProcessingPlugin(PluginInterface):
             **kwargs
         ) -> TextProcessResult:  # Result with TextSpan objects containing character indices
         "Split text into sentence spans with accurate character positions."
+```
+
+### Text Processing Storage (`storage.ipynb`)
+
+> Standardized SQLite storage for text processing results with content
+> hashing
+
+#### Import
+
+``` python
+from cjm_text_plugin_system.storage import (
+    TextProcessRow,
+    TextProcessStorage
+)
+```
+
+#### Classes
+
+``` python
+@dataclass
+class TextProcessRow:
+    "A single row from the text_jobs table."
+    
+    job_id: str  # Unique job identifier
+    input_text: str  # Original input text
+    input_hash: str  # Hash of input text in "algo:hexdigest" format
+    spans: Optional[List[Dict[str, Any]]]  # Processed text spans
+    metadata: Optional[Dict[str, Any]]  # Processing metadata
+    created_at: Optional[float]  # Unix timestamp
+```
+
+``` python
+class TextProcessStorage:
+    def __init__(
+        self,
+        db_path: str  # Absolute path to the SQLite database file
+    )
+    "Standardized SQLite storage for text processing results."
+    
+    def __init__(
+            self,
+            db_path: str  # Absolute path to the SQLite database file
+        )
+        "Initialize storage and create table if needed."
+    
+    def save(
+            self,
+            job_id: str,       # Unique job identifier
+            input_text: str,   # Original input text
+            input_hash: str,   # Hash of input text in "algo:hexdigest" format
+            spans: Optional[List[Dict[str, Any]]] = None,  # Processed text spans
+            metadata: Optional[Dict[str, Any]] = None       # Processing metadata
+        ) -> None
+        "Save a text processing result to the database."
+    
+    def get_by_job_id(
+            self,
+            job_id: str  # Job identifier to look up
+        ) -> Optional[TextProcessRow]:  # Row or None if not found
+        "Retrieve a text processing result by job ID."
+    
+    def list_jobs(
+            self,
+            limit: int = 100  # Maximum number of rows to return
+        ) -> List[TextProcessRow]:  # List of text processing rows
+        "List text processing jobs ordered by creation time (newest first)."
+    
+    def verify_input(
+            self,
+            job_id: str  # Job identifier to verify
+        ) -> Optional[bool]:  # True if input matches, False if changed, None if not found
+        "Verify the stored input text still matches its hash."
 ```
