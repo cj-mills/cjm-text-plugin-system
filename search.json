@@ -1,0 +1,162 @@
+[
+  {
+    "objectID": "plugin_interface.html",
+    "href": "plugin_interface.html",
+    "title": "Text Processing Plugin Interface",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "Text Processing Plugin Interface"
+    ]
+  },
+  {
+    "objectID": "plugin_interface.html#how-it-works",
+    "href": "plugin_interface.html#how-it-works",
+    "title": "Text Processing Plugin Interface",
+    "section": "How It Works",
+    "text": "How It Works\nHost Process                              Worker Process (Isolated Env)\n┌─────────────────────┐                  ┌─────────────────────────────┐\n│                     │                  │                             │\n│ plugin.execute(     │   HTTP/JSON      │  TextProcessingPlugin       │\n│   action=\"split_    │ ─────────────────▶    .execute(                │\n│     sentences\",     │                  │       action=\"split_        │\n│   text=\"Hello...\"   │                  │         sentences\",        │\n│ )                   │                  │       text=\"Hello...\"       │\n│                     │                  │    )                        │\n│                     │  ◀───────────────│                             │\n│ # Receives JSON     │   JSON response  │  # Returns TextProcessResult│\n│ # with spans        │                  │  # serialized to JSON       │\n└─────────────────────┘                  └─────────────────────────────┘\nThe execute() method acts as a dispatcher that routes to specific operations like split_sentences().",
+    "crumbs": [
+      "Text Processing Plugin Interface"
+    ]
+  },
+  {
+    "objectID": "plugin_interface.html#example-implementation",
+    "href": "plugin_interface.html#example-implementation",
+    "title": "Text Processing Plugin Interface",
+    "section": "Example Implementation",
+    "text": "Example Implementation\nA minimal text processing plugin that demonstrates the interface:\n\nimport re\nfrom typing import Optional, List\nfrom cjm_text_plugin_system.core import TextSpan, TextProcessResult\n\nclass ExampleTextPlugin(TextProcessingPlugin):\n    \"\"\"Example implementation showing how to create a text processing plugin.\"\"\"\n    \n    def __init__(self):\n        self._config: Dict[str, Any] = {}\n\n    @property\n    def name(self) -&gt; str:\n        return \"example-text-processor\"\n    \n    @property\n    def version(self) -&gt; str:\n        return \"1.0.0\"\n\n    def initialize(self, config: Optional[Dict[str, Any]] = None) -&gt; None:\n        \"\"\"Initialize with configuration.\"\"\"\n        self._config = config or {}\n\n    def execute(\n        self,\n        action: str = \"split_sentences\",\n        **kwargs\n    ) -&gt; Dict[str, Any]:\n        \"\"\"Dispatch to the appropriate text processing method.\"\"\"\n        if action == \"split_sentences\":\n            result = self.split_sentences(**kwargs)\n            return {\n                \"spans\": [span.to_dict() for span in result.spans],\n                \"metadata\": result.metadata\n            }\n        else:\n            raise ValueError(f\"Unknown action: {action}\")\n\n    def split_sentences(\n        self,\n        text: str,\n        **kwargs\n    ) -&gt; TextProcessResult:\n        \"\"\"Split text into sentences using simple regex.\"\"\"\n        spans: List[TextSpan] = []\n        \n        # Simple sentence splitting on .!? followed by whitespace\n        pattern = r'[^.!?]*[.!?]'\n        \n        for match in re.finditer(pattern, text):\n            sentence = match.group().strip()\n            if sentence:\n                spans.append(TextSpan(\n                    text=sentence,\n                    start_char=match.start(),\n                    end_char=match.end(),\n                    label=\"sentence\"\n                ))\n        \n        return TextProcessResult(\n            spans=spans,\n            metadata={\"processor\": self.name, \"method\": \"regex\"}\n        )\n\n    def get_config_schema(self) -&gt; Dict[str, Any]:\n        \"\"\"Return JSON Schema for configuration.\"\"\"\n        return {\n            \"type\": \"object\",\n            \"properties\": {}\n        }\n\n    def get_current_config(self) -&gt; Dict[str, Any]:\n        \"\"\"Return current configuration.\"\"\"\n        return self._config\n\n    def cleanup(self) -&gt; None:\n        \"\"\"Clean up resources.\"\"\"\n        pass\n\n\n# Test the example plugin\nplugin = ExampleTextPlugin()\nplugin.initialize({})\n\nprint(f\"Plugin: {plugin.name} v{plugin.version}\")\nprint(f\"Config schema: {plugin.get_config_schema()}\")\nprint(f\"Current config: {plugin.get_current_config()}\")\n\nPlugin: example-text-processor v1.0.0\nConfig schema: {'type': 'object', 'properties': {}}\nCurrent config: {}\n\n\n\n# Test split_sentences directly\ntext = \"Hello world. How are you? I am fine!\"\nresult = plugin.split_sentences(text)\n\nprint(f\"\\nInput: '{text}'\")\nprint(f\"Spans found: {len(result.spans)}\")\nprint(f\"Metadata: {result.metadata}\")\n\nfor i, span in enumerate(result.spans):\n    print(f\"  {i}: '{span.text}' [{span.start_char}:{span.end_char}]\")\n    # Verify mapping back to original\n    assert text[span.start_char:span.end_char].strip() == span.text\n\n\nInput: 'Hello world. How are you? I am fine!'\nSpans found: 3\nMetadata: {'processor': 'example-text-processor', 'method': 'regex'}\n  0: 'Hello world.' [0:12]\n  1: 'How are you?' [12:25]\n  2: 'I am fine!' [25:36]\n\n\n\n# Test execute() dispatcher (as Worker would call it)\njson_result = plugin.execute(action=\"split_sentences\", text=text)\n\nprint(f\"\\nJSON result from execute():\")\nprint(f\"  spans: {len(json_result['spans'])} items\")\nprint(f\"  metadata: {json_result['metadata']}\")\n\nfor span_dict in json_result['spans']:\n    print(f\"    - {span_dict}\")\n\n\nJSON result from execute():\n  spans: 3 items\n  metadata: {'processor': 'example-text-processor', 'method': 'regex'}\n    - {'text': 'Hello world.', 'start_char': 0, 'end_char': 12, 'label': 'sentence', 'metadata': {}}\n    - {'text': 'How are you?', 'start_char': 12, 'end_char': 25, 'label': 'sentence', 'metadata': {}}\n    - {'text': 'I am fine!', 'start_char': 25, 'end_char': 36, 'label': 'sentence', 'metadata': {}}\n\n\n\n# Cleanup\nplugin.cleanup()",
+    "crumbs": [
+      "Text Processing Plugin Interface"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "Core Data Structures",
+    "section": "",
+    "text": "source",
+    "crumbs": [
+      "Core Data Structures"
+    ]
+  },
+  {
+    "objectID": "core.html#testing-textspan",
+    "href": "core.html#testing-textspan",
+    "title": "Core Data Structures",
+    "section": "Testing TextSpan",
+    "text": "Testing TextSpan\nTextSpan tracks character positions so you can map processed results back to the original text.\n\n# Test TextSpan creation\nspan = TextSpan(\n    text=\"Hello world.\",\n    start_char=0,\n    end_char=12,\n    label=\"sentence\"\n)\n\nprint(f\"TextSpan: '{span.text}'\")\nprint(f\"Position: [{span.start_char}, {span.end_char})\")\nprint(f\"Label: {span.label}\")\nprint(f\"As dict: {span.to_dict()}\")\n\nTextSpan: 'Hello world.'\nPosition: [0, 12)\nLabel: sentence\nAs dict: {'text': 'Hello world.', 'start_char': 0, 'end_char': 12, 'label': 'sentence', 'metadata': {}}\n\n\n\n# Test TextSpan with metadata\nspan_with_meta = TextSpan(\n    text=\"This is a token.\",\n    start_char=13,\n    end_char=30,\n    label=\"token\",\n    metadata={\"pos\": \"NOUN\", \"confidence\": 0.98}\n)\n\nprint(f\"Span with metadata: {span_with_meta.to_dict()}\")\n\nSpan with metadata: {'text': 'This is a token.', 'start_char': 13, 'end_char': 30, 'label': 'token', 'metadata': {'pos': 'NOUN', 'confidence': 0.98}}",
+    "crumbs": [
+      "Core Data Structures"
+    ]
+  },
+  {
+    "objectID": "core.html#testing-textprocessresult",
+    "href": "core.html#testing-textprocessresult",
+    "title": "Core Data Structures",
+    "section": "Testing TextProcessResult",
+    "text": "Testing TextProcessResult\nTextProcessResult holds multiple spans from a processing operation.\n\n# Test TextProcessResult with multiple spans\noriginal_text = \"Hello world. How are you?\"\n\nresult = TextProcessResult(\n    spans=[\n        TextSpan(text=\"Hello world.\", start_char=0, end_char=12, label=\"sentence\"),\n        TextSpan(text=\"How are you?\", start_char=13, end_char=25, label=\"sentence\"),\n    ],\n    metadata={\"processor\": \"example\", \"language\": \"en\"}\n)\n\nprint(f\"Number of spans: {len(result.spans)}\")\nprint(f\"Metadata: {result.metadata}\")\n\nfor i, span in enumerate(result.spans):\n    print(f\"  Span {i}: '{span.text}' [{span.start_char}:{span.end_char}]\")\n    # Verify span maps back to original text\n    assert original_text[span.start_char:span.end_char] == span.text\n\nNumber of spans: 2\nMetadata: {'processor': 'example', 'language': 'en'}\n  Span 0: 'Hello world.' [0:12]\n  Span 1: 'How are you?' [13:25]\n\n\n\n# Test minimal result (empty spans)\nempty_result = TextProcessResult(spans=[])\nprint(f\"Empty result: {len(empty_result.spans)} spans, metadata: {empty_result.metadata}\")\n\nEmpty result: 0 spans, metadata: {}",
+    "crumbs": [
+      "Core Data Structures"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "cjm-text-plugin-system",
+    "section": "",
+    "text": "pip install cjm_text_plugin_system",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "cjm-text-plugin-system",
+    "section": "",
+    "text": "pip install cjm_text_plugin_system",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "index.html#project-structure",
+    "href": "index.html#project-structure",
+    "title": "cjm-text-plugin-system",
+    "section": "Project Structure",
+    "text": "Project Structure\nnbs/\n├── core.ipynb             # DTOs for text processing with character-level span tracking\n├── plugin_interface.ipynb # Domain-specific plugin interface for text processing operations\n└── storage.ipynb          # Standardized SQLite storage for text processing results with content hashing\nTotal: 3 notebooks",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "index.html#module-dependencies",
+    "href": "index.html#module-dependencies",
+    "title": "cjm-text-plugin-system",
+    "section": "Module Dependencies",
+    "text": "Module Dependencies\ngraph LR\n    core[core&lt;br/&gt;Core Data Structures]\n    plugin_interface[plugin_interface&lt;br/&gt;Text Processing Plugin Interface]\n    storage[storage&lt;br/&gt;Text Processing Storage]\n\n    plugin_interface --&gt; core\n1 cross-module dependencies detected",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "index.html#cli-reference",
+    "href": "index.html#cli-reference",
+    "title": "cjm-text-plugin-system",
+    "section": "CLI Reference",
+    "text": "CLI Reference\nNo CLI commands found in this project.",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "index.html#module-overview",
+    "href": "index.html#module-overview",
+    "title": "cjm-text-plugin-system",
+    "section": "Module Overview",
+    "text": "Module Overview\nDetailed documentation for each module in the project:\n\nCore Data Structures (core.ipynb)\n\nDTOs for text processing with character-level span tracking\n\n\nImport\nfrom cjm_text_plugin_system.core import (\n    TextSpan,\n    TextProcessResult\n)\n\n\nClasses\n@dataclass\nclass TextSpan:\n    \"Represents a segment of text with its original character coordinates.\"\n    \n    text: str  # The text content of this span\n    start_char: int  # 0-indexed start position in original string\n    end_char: int  # 0-indexed end position (exclusive)\n    label: str = 'sentence'  # Span type: 'sentence', 'token', 'paragraph', etc.\n    metadata: Dict[str, Any] = field(...)  # Additional span metadata\n    \n    def to_dict(self) -&gt; Dict[str, Any]:  # Dictionary representation\n        \"Convert span to dictionary for serialization.\"\n@dataclass\nclass TextProcessResult:\n    \"Container for text processing results.\"\n    \n    spans: List[TextSpan]  # List of text spans from processing\n    metadata: Dict[str, Any] = field(...)  # Processing metadata\n\n\n\nText Processing Plugin Interface (plugin_interface.ipynb)\n\nDomain-specific plugin interface for text processing operations\n\n\nImport\nfrom cjm_text_plugin_system.plugin_interface import (\n    TextProcessingPlugin\n)\n\n\nClasses\nclass TextProcessingPlugin(PluginInterface):\n    \"\"\"\n    Abstract base class for plugins that perform NLP operations.\n    \n    Extends PluginInterface with text processing requirements:\n    - `execute`: Dispatch method for different text operations\n    - `split_sentences`: Split text into sentence spans with character positions\n    \"\"\"\n    \n    def execute(\n            self,\n            action: str = \"split_sentences\",  # Operation to perform: 'split_sentences', 'tokenize', etc.\n            **kwargs\n        ) -&gt; Dict[str, Any]:  # JSON-serializable result\n        \"Execute a text processing operation.\"\n    \n    def split_sentences(\n            self,\n            text: str,  # Input text to split\n            **kwargs\n        ) -&gt; TextProcessResult:  # Result with TextSpan objects containing character indices\n        \"Split text into sentence spans with accurate character positions.\"\n\n\n\nText Processing Storage (storage.ipynb)\n\nStandardized SQLite storage for text processing results with content hashing\n\n\nImport\nfrom cjm_text_plugin_system.storage import (\n    TextProcessRow,\n    TextProcessStorage\n)\n\n\nClasses\n@dataclass\nclass TextProcessRow:\n    \"A single row from the text_jobs table.\"\n    \n    job_id: str  # Unique job identifier\n    input_text: str  # Original input text\n    input_hash: str  # Hash of input text in \"algo:hexdigest\" format\n    spans: Optional[List[Dict[str, Any]]]  # Processed text spans\n    metadata: Optional[Dict[str, Any]]  # Processing metadata\n    created_at: Optional[float]  # Unix timestamp\nclass TextProcessStorage:\n    def __init__(\n        self,\n        db_path: str  # Absolute path to the SQLite database file\n    )\n    \"Standardized SQLite storage for text processing results.\"\n    \n    def __init__(\n            self,\n            db_path: str  # Absolute path to the SQLite database file\n        )\n        \"Initialize storage and create table if needed.\"\n    \n    def save(\n            self,\n            job_id: str,       # Unique job identifier\n            input_text: str,   # Original input text\n            input_hash: str,   # Hash of input text in \"algo:hexdigest\" format\n            spans: Optional[List[Dict[str, Any]]] = None,  # Processed text spans\n            metadata: Optional[Dict[str, Any]] = None       # Processing metadata\n        ) -&gt; None\n        \"Save a text processing result to the database.\"\n    \n    def get_by_job_id(\n            self,\n            job_id: str  # Job identifier to look up\n        ) -&gt; Optional[TextProcessRow]:  # Row or None if not found\n        \"Retrieve a text processing result by job ID.\"\n    \n    def list_jobs(\n            self,\n            limit: int = 100  # Maximum number of rows to return\n        ) -&gt; List[TextProcessRow]:  # List of text processing rows\n        \"List text processing jobs ordered by creation time (newest first).\"\n    \n    def verify_input(\n            self,\n            job_id: str  # Job identifier to verify\n        ) -&gt; Optional[bool]:  # True if input matches, False if changed, None if not found\n        \"Verify the stored input text still matches its hash.\"",
+    "crumbs": [
+      "cjm-text-plugin-system"
+    ]
+  },
+  {
+    "objectID": "storage.html",
+    "href": "storage.html",
+    "title": "Text Processing Storage",
+    "section": "",
+    "text": "A dataclass representing a single row in the standardized text_jobs table.\n\nsource\n\n\n\ndef TextProcessRow(\n    job_id:str, input_text:str, input_hash:str, spans:Optional=None, metadata:Optional=None,\n    created_at:Optional=None\n)-&gt;None:\n\nA single row from the text_jobs table.\n\n# Test TextProcessRow creation\nrow = TextProcessRow(\n    job_id=\"job_abc123\",\n    input_text=\"Hello world. How are you?\",\n    input_hash=\"sha256:\" + \"a\" * 64,\n    spans=[\n        {\"text\": \"Hello world.\", \"start_char\": 0, \"end_char\": 12, \"label\": \"sentence\"},\n        {\"text\": \"How are you?\", \"start_char\": 13, \"end_char\": 25, \"label\": \"sentence\"}\n    ],\n    metadata={\"processor\": \"nltk\"}\n)\n\nprint(f\"Row: job_id={row.job_id}\")\nprint(f\"Input: {row.input_text}\")\nprint(f\"Spans: {len(row.spans)} spans\")\n\nRow: job_id=job_abc123\nInput: Hello world. How are you?\nSpans: 2 spans",
+    "crumbs": [
+      "Text Processing Storage"
+    ]
+  },
+  {
+    "objectID": "storage.html#textprocessrow",
+    "href": "storage.html#textprocessrow",
+    "title": "Text Processing Storage",
+    "section": "",
+    "text": "A dataclass representing a single row in the standardized text_jobs table.\n\nsource\n\n\n\ndef TextProcessRow(\n    job_id:str, input_text:str, input_hash:str, spans:Optional=None, metadata:Optional=None,\n    created_at:Optional=None\n)-&gt;None:\n\nA single row from the text_jobs table.\n\n# Test TextProcessRow creation\nrow = TextProcessRow(\n    job_id=\"job_abc123\",\n    input_text=\"Hello world. How are you?\",\n    input_hash=\"sha256:\" + \"a\" * 64,\n    spans=[\n        {\"text\": \"Hello world.\", \"start_char\": 0, \"end_char\": 12, \"label\": \"sentence\"},\n        {\"text\": \"How are you?\", \"start_char\": 13, \"end_char\": 25, \"label\": \"sentence\"}\n    ],\n    metadata={\"processor\": \"nltk\"}\n)\n\nprint(f\"Row: job_id={row.job_id}\")\nprint(f\"Input: {row.input_text}\")\nprint(f\"Spans: {len(row.spans)} spans\")\n\nRow: job_id=job_abc123\nInput: Hello world. How are you?\nSpans: 2 spans",
+    "crumbs": [
+      "Text Processing Storage"
+    ]
+  },
+  {
+    "objectID": "storage.html#textprocessstorage",
+    "href": "storage.html#textprocessstorage",
+    "title": "Text Processing Storage",
+    "section": "TextProcessStorage",
+    "text": "TextProcessStorage\nStandardized SQLite storage that all text processing plugins should use. Defines the canonical schema for the text_jobs table with input hashing for traceability.\nSchema:\nCREATE TABLE IF NOT EXISTS text_jobs (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    job_id TEXT UNIQUE NOT NULL,\n    input_text TEXT NOT NULL,\n    input_hash TEXT NOT NULL,\n    spans JSON,\n    metadata JSON,\n    created_at REAL NOT NULL\n);\nThe input_hash column stores a hash of the input text in \"algo:hexdigest\" format, enabling downstream consumers to verify that the source text hasn’t changed since processing.\n\nsource\n\nTextProcessStorage\n\ndef TextProcessStorage(\n    db_path:str, # Absolute path to the SQLite database file\n):\n\nStandardized SQLite storage for text processing results.",
+    "crumbs": [
+      "Text Processing Storage"
+    ]
+  },
+  {
+    "objectID": "storage.html#testing",
+    "href": "storage.html#testing",
+    "title": "Text Processing Storage",
+    "section": "Testing",
+    "text": "Testing\n\nimport tempfile\nimport os\n\n# Create storage with temp database\ntmp_db = tempfile.NamedTemporaryFile(suffix=\".db\", delete=False)\nstorage = TextProcessStorage(tmp_db.name)\n\nprint(f\"Storage initialized at: {tmp_db.name}\")\n\nStorage initialized at: /tmp/tmp0lcqkuzr.db\n\n\n\n# Save a text processing result\ntest_text = \"Hello world. How are you?\"\ninput_hash = hash_bytes(test_text.encode())\n\nstorage.save(\n    job_id=\"job_test_001\",\n    input_text=test_text,\n    input_hash=input_hash,\n    spans=[\n        {\"text\": \"Hello world.\", \"start_char\": 0, \"end_char\": 12, \"label\": \"sentence\"},\n        {\"text\": \"How are you?\", \"start_char\": 13, \"end_char\": 25, \"label\": \"sentence\"}\n    ],\n    metadata={\"processor\": \"nltk\", \"language\": \"english\"}\n)\n\nprint(f\"Saved job_test_001\")\nprint(f\"Input hash: {input_hash}\")\n\nSaved job_test_001\nInput hash: sha256:1d473b202b6fea30ab890b153d9d5fa3a79830a7bdb6d662581a95bda1a57866\n\n\n\n# Retrieve by job ID\nrow = storage.get_by_job_id(\"job_test_001\")\nassert row is not None\nassert row.job_id == \"job_test_001\"\nassert row.input_text == test_text\nassert row.input_hash == input_hash\nassert len(row.spans) == 2\nassert row.metadata[\"processor\"] == \"nltk\"\nassert row.created_at is not None\n\nprint(f\"Retrieved: {row.job_id}\")\nprint(f\"Input: {row.input_text}\")\nprint(f\"Spans: {len(row.spans)} spans\")\nprint(f\"Input hash: {row.input_hash[:30]}...\")\n\n# Missing job returns None\nassert storage.get_by_job_id(\"nonexistent\") is None\nprint(\"get_by_job_id returns None for missing job: OK\")\n\nRetrieved: job_test_001\nInput: Hello world. How are you?\nSpans: 2 spans\nInput hash: sha256:1d473b202b6fea30ab890b1...\nget_by_job_id returns None for missing job: OK\n\n\n\n# Save another and test list_jobs\nstorage.save(\n    job_id=\"job_test_002\",\n    input_text=\"Second text.\",\n    input_hash=hash_bytes(b\"Second text.\"),\n    spans=[{\"text\": \"Second text.\", \"start_char\": 0, \"end_char\": 12, \"label\": \"sentence\"}]\n)\n\njobs = storage.list_jobs()\nassert len(jobs) == 2\nassert jobs[0].job_id == \"job_test_002\"  # Newest first\n\nprint(f\"list_jobs returned {len(jobs)} rows: {[j.job_id for j in jobs]}\")\n\nlist_jobs returned 2 rows: ['job_test_002', 'job_test_001']\n\n\n\n# Test input verification\nassert storage.verify_input(\"job_test_001\") == True\nprint(\"verify_input with unchanged text: True\")\n\n# Tamper with input text directly in DB\nwith sqlite3.connect(tmp_db.name) as con:\n    con.execute(\"UPDATE text_jobs SET input_text = 'TAMPERED' WHERE job_id = 'job_test_001'\")\n\nassert storage.verify_input(\"job_test_001\") == False\nprint(\"verify_input after tampering: False\")\n\n# Missing job returns None\nassert storage.verify_input(\"nonexistent\") is None\nprint(\"verify_input for missing job: None\")\n\nverify_input with unchanged text: True\nverify_input after tampering: False\nverify_input for missing job: None\n\n\n\n# Cleanup\nos.unlink(tmp_db.name)\nprint(\"Cleanup complete\")\n\nCleanup complete",
+    "crumbs": [
+      "Text Processing Storage"
+    ]
+  }
+]
